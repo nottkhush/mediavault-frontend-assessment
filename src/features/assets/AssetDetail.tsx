@@ -1,45 +1,54 @@
-import { useEffect, useState } from 'react';
-import { getAsset, thumbnailUrl, updateAsset } from '@/api/client';
-import { formatBytes, formatDate, formatDuration, statusLabel } from '@/lib/format';
-import type { Asset, AssetStatus } from '@/lib/types';
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getAsset, thumbnailUrl } from "@/api/client";
+import { describeError } from "@/lib/errors";
+import {
+  formatBytes,
+  formatDate,
+  formatDuration,
+  statusLabel,
+} from "@/lib/format";
+import type { Asset, AssetStatus } from "@/lib/types";
+import { assetKey, saveStatus } from "./statusEdit";
 
-const STATUSES: AssetStatus[] = ['draft', 'in_review', 'approved', 'archived'];
+const STATUSES: AssetStatus[] = ["draft", "in_review", "approved", "archived"];
 
 interface Props {
   id: string;
   onClose: () => void;
-  onSaved: (asset: Asset) => void;
 }
 
-/**
- * Baseline detail panel. Loads on open, saves with no optimistic update,
- * surfaces failures as raw strings, and does nothing about focus.
- */
-export function AssetDetail({ id, onClose, onSaved }: Props) {
-  const [asset, setAsset] = useState<Asset | null>(null);
-  const [error, setError] = useState<string | null>(null);
+export function AssetDetail({ id, onClose }: Props) {
+  const queryClient = useQueryClient();
+  const {
+    data: asset,
+    error: loadError,
+    refetch,
+  } = useQuery({
+    queryKey: assetKey(id),
+    queryFn: ({ signal }) => getAsset(id, signal),
+    staleTime: 0, // show the cached copy instantly, but always check it
+  });
+
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [conflict, setConflict] = useState<{
+    current: Asset;
+    wanted: AssetStatus;
+  } | null>(null);
 
-  useEffect(() => {
-    setAsset(null);
-    setError(null);
-    getAsset(id)
-      .then(setAsset)
-      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Load failed'));
-  }, [id]);
-
-  async function setStatus(status: AssetStatus) {
-    if (!asset) return;
+  async function change(wanted: AssetStatus, from: Asset) {
     setSaving(true);
-    setError(null);
-    try {
-      const updated = await updateAsset(asset.id, asset.version, { status });
-      setAsset(updated);
-      onSaved(updated);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed');
-    } finally {
-      setSaving(false);
+    setSaveError(null);
+    setConflict(null);
+    const result = await saveStatus(queryClient, from, wanted);
+    setSaving(false);
+    if (result.kind === "conflict") {
+      setConflict({ current: result.current, wanted: result.wanted });
+    } else if (result.kind === "failed") {
+      setSaveError(
+        describeError(result.error, "We couldn't save that change."),
+      );
     }
   }
 
@@ -50,12 +59,23 @@ export function AssetDetail({ id, onClose, onSaved }: Props) {
         <button onClick={onClose}>Close</button>
       </div>
 
-      {error && <p className="error">{error}</p>}
-      {!asset && !error && <p className="muted">Loading…</p>}
+      {loadError && !asset && (
+        <div role="alert">
+          <p className="error">
+            {describeError(loadError, "Couldn't load this asset.")}
+          </p>
+          <button onClick={() => refetch()}>Try again</button>
+        </div>
+      )}
+      {!asset && !loadError && <p className="muted">Loading…</p>}
 
       {asset && (
         <div className="panel__body">
-          <img className="panel__thumb" src={thumbnailUrl(asset.id)} alt="" />
+          {asset.hasThumbnail ? (
+            <img className="panel__thumb" src={thumbnailUrl(asset.id)} alt="" />
+          ) : (
+            <div className="panel__thumb panel__thumb--empty">No preview</div>
+          )}
           <h3>{asset.name}</h3>
           <dl className="facts">
             <dt>Id</dt>
@@ -64,7 +84,7 @@ export function AssetDetail({ id, onClose, onSaved }: Props) {
             <dd>{asset.kind}</dd>
             <dt>Size</dt>
             <dd>{formatBytes(asset.sizeBytes)}</dd>
-            {asset.width && (
+            {asset.width != null && (
               <>
                 <dt>Dimensions</dt>
                 <dd>
@@ -72,7 +92,7 @@ export function AssetDetail({ id, onClose, onSaved }: Props) {
                 </dd>
               </>
             )}
-            {asset.durationSec && (
+            {asset.durationSec != null && (
               <>
                 <dt>Duration</dt>
                 <dd>{formatDuration(asset.durationSec)}</dd>
@@ -100,12 +120,36 @@ export function AssetDetail({ id, onClose, onSaved }: Props) {
               <button
                 key={status}
                 disabled={saving || status === asset.status}
-                onClick={() => setStatus(status)}
+                onClick={() => change(status, asset)}
               >
                 {statusLabel(status)}
               </button>
             ))}
           </div>
+
+          {saveError && (
+            <p className="error" role="alert">
+              {saveError}
+            </p>
+          )}
+
+          {conflict && (
+            <div className="panel__alert" role="alert">
+              <p>
+                Someone else changed this asset while you were editing. It is
+                now {statusLabel(conflict.current.status)}, so your change to{" "}
+                {statusLabel(conflict.wanted)} was not applied.
+              </p>
+              <div className="row">
+                <button
+                  onClick={() => change(conflict.wanted, conflict.current)}
+                >
+                  Set to {statusLabel(conflict.wanted)} anyway
+                </button>
+                <button onClick={() => setConflict(null)}>Keep current</button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </aside>
