@@ -9,6 +9,8 @@ import { describeError } from '@/lib/errors';
 import { statusLabel } from '@/lib/format';
 import type { Asset, AssetStatus, AssetQuery } from '@/lib/types';
 import { useCallback, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { patchAssetInCache } from '@/features/assets/AssetCache';
 
 const STATUSES: AssetStatus[] = ['draft', 'in_review', 'approved', 'archived'];
 const SORTS: Array<{ value: NonNullable<AssetQuery['sort']>; label: string }> = [
@@ -24,6 +26,7 @@ export function App() {
   const [searchText, setSearchText] = useSearchDraft(view.q, (next) =>
     updateView({ q: next }, 'replace'),
   );
+  const queryClient = useQueryClient();
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -61,6 +64,10 @@ export function App() {
     try {
       // Sends every selected id in one call, which the API refuses above 50.
       const result = await bulkSetStatus(ids, next);
+      for (const r of result.results) {
+  if (r.ok) patchAssetInCache(queryClient, r.asset);
+}
+queryClient.invalidateQueries({ queryKey: ['assets'], refetchType: 'none' });
       setNotice(`${result.applied} updated, ${result.failed} failed.`);
       setSelectedIds(new Set());
     } catch (err) {
@@ -68,9 +75,12 @@ export function App() {
     }
   }
 
-  function handleSaved(_asset: Asset) {
-    // The list is not told that anything changed, so it shows stale rows.
-  }
+  function handleSaved(asset: Asset) {
+  patchAssetInCache(queryClient, asset);
+  // Other cached views may now be wrong (a filter may no longer match this row).
+  // Mark them stale without refetching, so they refresh when next opened.
+  queryClient.invalidateQueries({ queryKey: ['assets'], refetchType: 'none' });
+}
 
   return (
     <div className="app">
