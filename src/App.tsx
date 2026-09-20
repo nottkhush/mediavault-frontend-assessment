@@ -27,7 +27,15 @@ export function App() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const { items, total, loading, error } = useAssets({ ...view, limit: 24 });
+  const {
+    items,
+    total,
+    isPending,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    error,
+  } = useAssets(view);
 
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
@@ -97,10 +105,15 @@ export function App() {
           </label>
         ))}
         <span className="muted">
-          {loading
+          {isPending
             ? "Loading…"
             : `${items.length} of ${total.toLocaleString()} shown`}
         </span>
+        {hasNextPage && (
+          <button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+            {isFetchingNextPage ? "Loading…" : "Load more"}
+          </button>
+        )}
       </div>
 
       {selectedIds.size > 0 && (
@@ -118,7 +131,7 @@ export function App() {
       )}
 
       {notice && <p className="notice">{notice}</p>}
-      {error && <p className="error">{error}</p>}
+      {error && <p className="error">{error.message}</p>}
 
       <main className="content">
         <AssetGrid

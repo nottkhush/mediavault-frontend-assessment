@@ -1,48 +1,44 @@
-import { useEffect, useState } from 'react';
-import { listAssets } from '@/api/client';
-import type { Asset, AssetQuery } from '@/lib/types';
+import { useMemo } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { listAssets, toSearchParams } from '@/api/client';
+import type { Asset } from '@/lib/types';
+import type { ViewQuery } from './urlState';
 
-interface State {
-  items: Asset[];
-  total: number;
-  nextCursor: string | null;
-  loading: boolean;
-  error: string | null;
-}
+// Under the server's cap of 50, and divisible by common column counts.
+export const PAGE_SIZE = 48;
 
-/**
- * Baseline loader. Reviewers know this hook is wrong in several ways.
- * Replacing it wholesale is expected and encouraged.
- */
-export function useAssets(query: AssetQuery) {
-  const [state, setState] = useState<State>({
-    items: [],
-    total: 0,
-    nextCursor: null,
-    loading: true,
-    error: null,
+export function useAssets(view: ViewQuery) {
+  // Canonical string, without the cursor. Same view, same key, every time.
+  const key = toSearchParams({ ...view, limit: PAGE_SIZE });
+
+  const query = useInfiniteQuery({
+    queryKey: ['assets', key],
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam, signal }) =>
+      listAssets({ ...view, limit: PAGE_SIZE, cursor: pageParam ?? undefined }, signal),
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
   });
 
-  useEffect(() => {
-    setState((s) => ({ ...s, loading: true, error: null }));
-    listAssets(query)
-      .then((page) => {
-        setState({
-          items: page.items,
-          total: page.total,
-          nextCursor: page.nextCursor,
-          loading: false,
-          error: null,
-        });
-      })
-      .catch((err: unknown) => {
-        setState((s) => ({
-          ...s,
-          loading: false,
-          error: err instanceof Error ? err.message : 'Something went wrong',
-        }));
-      });
-  }, [JSON.stringify(query)]);
+  // Pagination is offset-based on the server, so rows can shift between pages
+  // when data changes. De-duplicating by id keeps React keys unique.
+  const items = useMemo(() => {
+    const byId = new Map<string, Asset>();
+    for (const page of query.data?.pages ?? []) {
+      for (const asset of page.items) byId.set(asset.id, asset);
+    }
+    return [...byId.values()];
+  }, [query.data]);
 
-  return state;
+  const pages = query.data?.pages ?? [];
+  const total = pages[pages.length - 1]?.total ?? 0;
+
+  return {
+    items,
+    total,
+    isPending: query.isPending,
+    isFetchingNextPage: query.isFetchingNextPage,
+    hasNextPage: query.hasNextPage,
+    fetchNextPage: query.fetchNextPage,
+    error: query.error,
+  };
 }
