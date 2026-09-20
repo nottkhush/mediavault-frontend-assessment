@@ -1,5 +1,5 @@
-import { statusLabel } from "@/lib/format";
-import type { BulkState } from "./bulk";
+import { statusLabel } from '@/lib/format';
+import type { BulkState } from './bulk';
 
 interface Props {
   state: BulkState;
@@ -7,17 +7,16 @@ interface Props {
   onDismiss: () => void;
 }
 
-const assets = (n: number) =>
-  `${n.toLocaleString()} ${n === 1 ? "asset" : "assets"}`;
+const assets = (n: number) => `${n.toLocaleString()} ${n === 1 ? 'asset' : 'assets'}`;
+const isConnection = (code: string) => code === 'offline' || code === 'network_error';
 
 export function BulkNotice({ state, onRetry, onDismiss }: Props) {
-  if (state.phase === "idle") return null;
+  if (state.phase === 'idle') return null;
 
-  if (state.phase === "running") {
+  if (state.phase === 'running') {
     return (
       <p className="notice" role="status">
-        Updating {state.done.toLocaleString()} of {state.total.toLocaleString()}
-        …
+        Updating {state.done.toLocaleString()} of {state.total.toLocaleString()}…
       </p>
     );
   }
@@ -34,22 +33,23 @@ export function BulkNotice({ state, onRetry, onDismiss }: Props) {
     );
   }
 
-  const onHold = failed.filter((f) => f.code === "legal_hold").length;
-  const temporary = failed.filter((f) => f.retryable).length;
-  const other = failed.length - onHold - temporary;
+  const onHold = failed.filter((f) => f.code === 'legal_hold').length;
+  const connection = failed.filter((f) => isConnection(f.code)).length;
+  const temporary = failed.filter((f) => f.retryable && !isConnection(f.code)).length;
+  const other = failed.length - onHold - connection - temporary;
+  const retryable = connection + temporary;
   const reasons = [
     onHold > 0 && `${onHold.toLocaleString()} on legal hold`,
+    connection > 0 && `${connection.toLocaleString()} lost connection`,
     temporary > 0 && `${temporary.toLocaleString()} hit a temporary error`,
     other > 0 && `${other.toLocaleString()} could not be found or changed`,
   ].filter(Boolean);
 
   return (
     <p className="notice" role="alert">
-      {assets(applied)} set to {label}. {assets(failed.length)} could not be
-      changed ({reasons.join(", ")}). They stay selected.
-      {temporary > 0 && (
-        <button onClick={onRetry}>Retry {temporary.toLocaleString()}</button>
-      )}
+      {assets(applied)} set to {label}. {assets(failed.length)} could not be changed (
+      {reasons.join(', ')}). They stay selected.
+      {retryable > 0 && <button onClick={onRetry}>Retry {retryable.toLocaleString()}</button>}
       <button onClick={onDismiss}>Dismiss</button>
     </p>
   );

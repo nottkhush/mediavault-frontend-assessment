@@ -422,3 +422,15 @@ button:disabled {
 .panel__alert p {
   margin: 0 0 8px;
 }
+.banner {
+  margin: 0;
+  padding: 8px 16px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--line);
+}
+.banner--offline {
+  background: #fff4e0;
+}
+.banner--online {
+  background: #e6f4ea;
+}

@@ -1,10 +1,14 @@
 import { describeError, errorReference } from "@/lib/errors";
 
-export function GridSkeleton({ retrying }: { retrying: boolean }) {
+export function GridSkeleton({ retrying, offline }: { retrying: boolean; offline: boolean }) {
   return (
     <div className="grid" aria-busy="true">
       <p className="muted grid__status" role="status">
-        {retrying ? "Taking longer than usual. Retrying…" : "Loading assets…"}
+        {offline
+          ? "You're offline. Assets will load when you reconnect."
+          : retrying
+            ? 'Taking longer than usual. Retrying…'
+            : 'Loading assets…'}
       </p>
       {Array.from({ length: 12 }, (_, i) => (
         <div key={i} className="card card--skeleton" aria-hidden="true">

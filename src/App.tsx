@@ -4,7 +4,6 @@ import { AssetDetail } from '@/features/assets/AssetDetail';
 import { AssetGrid } from '@/features/assets/AssetGrid';
 import {
   applyOptimisticStatus,
-  patchAssetInCache,
   patchAssetsInCache,
 } from '@/features/assets/AssetCache';
 import { runBulkStatus } from '@/features/assets/bulk';
@@ -17,6 +16,9 @@ import { toUrlSearch, useViewQuery } from '@/features/assets/urlState';
 import { describeError } from '@/lib/errors';
 import { statusLabel } from '@/lib/format';
 import type { Asset, AssetStatus, AssetQuery } from '@/lib/types';
+import { isOffline, useOnline } from '@/api/online';
+import { ConnectionBanner } from '@/components/connectionBanner';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const STATUSES: AssetStatus[] = ['draft', 'in_review', 'approved', 'archived'];
 const SORTS: Array<{ value: NonNullable<AssetQuery['sort']>; label: string }> = [
@@ -28,6 +30,7 @@ const SORTS: Array<{ value: NonNullable<AssetQuery['sort']>; label: string }> = 
 
 export function App() {
   const queryClient = useQueryClient();
+    const online = useOnline();
   const [view, updateView] = useViewQuery();
   const { status, sort } = view;
   const [searchText, setSearchText] = useSearchDraft(view.q, (next) =>
@@ -74,7 +77,23 @@ export function App() {
     updateView({ q: '', status: [], kind: [], tag: [], collectionId: '', owner: '' });
   }
 
+  
   async function runBulk(ids: string[], target: AssetStatus, appliedBefore = 0) {
+        // No network: don't flip cards we'd only have to flip back, and don't fire requests.
+    if (isOffline()) {
+      setBulk({
+        phase: 'done',
+        status: target,
+        applied: appliedBefore,
+        failed: ids.map((id) => ({
+          id,
+          code: 'offline',
+          message: 'You are offline.',
+          retryable: true,
+        })),
+      });
+      return;
+    }
     // 1. Optimistic: flip the cards now and remember the originals.
     const previous = applyOptimisticStatus(queryClient, new Set(ids), target);
     setBulk({ phase: 'running', status: target, done: 0, total: ids.length });
@@ -131,14 +150,10 @@ export function App() {
     if (ids.length > 0) void runBulk(ids, bulk.status, bulk.applied);
   }
 
-  function handleSaved(asset: Asset) {
-    patchAssetInCache(queryClient, asset);
-    // Other cached views may now be wrong. Mark them stale without refetching.
-    queryClient.invalidateQueries({ queryKey: ['assets'], refetchType: 'none' });
-  }
 
   return (
     <div className="app">
+      <ConnectionBanner />
       <header className="topbar">
         <h1>MediaVault</h1>
         <input
@@ -213,28 +228,32 @@ export function App() {
         </p>
       )}
 
-      <main className="content">
-        {isPending ? (
-          <GridSkeleton retrying={failureCount > 0} />
-        ) : error && items.length === 0 ? (
-          <GridError error={error} onRetry={retry} />
-        ) : items.length === 0 ? (
-          <GridEmpty q={view.q} onClear={clearFilters} />
-        ) : (
-          <AssetGrid
-            assets={items}
-            selectedIds={selectedIds}
-            activeId={activeId}
-            onToggleSelect={toggleSelect}
-            onOpen={setActiveId}
-            hasMore={hasNextPage}
-            loadingMore={isFetchingNextPage}
-            loadFailed={Boolean(error)}
-            onLoadMore={fetchNextPage}
-          />
-        )}
+           <main className="content">
+        <ErrorBoundary label="the asset list" resetKey={viewKey}>
+          {isPending ? (
+            <GridSkeleton retrying={failureCount > 0} offline={!online} />
+          ) : error && items.length === 0 ? (
+            <GridError error={error} onRetry={retry} />
+          ) : items.length === 0 ? (
+            <GridEmpty q={view.q} onClear={clearFilters} />
+          ) : (
+            <AssetGrid
+              assets={items}
+              selectedIds={selectedIds}
+              activeId={activeId}
+              onToggleSelect={toggleSelect}
+              onOpen={setActiveId}
+              hasMore={hasNextPage}
+              loadingMore={isFetchingNextPage}
+              loadFailed={Boolean(error)}
+              onLoadMore={fetchNextPage}
+            />
+          )}
+        </ErrorBoundary>
         {activeId && (
-          <AssetDetail id={activeId} onClose={() => setActiveId(null)} onSaved={handleSaved} />
+          <ErrorBoundary key={activeId} label="this asset" className="panel">
+            <AssetDetail id={activeId} onClose={() => setActiveId(null)} />
+          </ErrorBoundary>
         )}
       </main>
     </div>

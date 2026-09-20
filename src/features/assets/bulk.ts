@@ -1,9 +1,9 @@
-import { ApiError, bulkSetStatus } from "@/api/client";
-import type { Asset, AssetStatus, BulkResult } from "@/lib/types";
+import { ApiError, bulkSetStatus } from '@/api/client';
+import { withRetry } from '@/api/retry';
+import type { Asset, AssetStatus, BulkResult } from '@/lib/types';
 
 export const CHUNK_SIZE = 50; // the server's hard cap
 export const CONCURRENCY = 2;
-const MAX_TRANSPORT_ATTEMPTS = 4;
 const MAX_CONFLICT_PASSES = 3;
 
 export interface Failure {
@@ -19,72 +19,37 @@ export interface BulkOutcome {
 }
 
 export type BulkState =
-  | { phase: "idle" }
-  | { phase: "running"; status: AssetStatus; done: number; total: number }
-  | { phase: "done"; status: AssetStatus; applied: number; failed: Failure[] };
+  | { phase: 'idle' }
+  | { phase: 'running'; status: AssetStatus; done: number; total: number }
+  | { phase: 'done'; status: AssetStatus; applied: number; failed: Failure[] };
 
-const sleep = (ms: number) =>
-  new Promise<void>((resolve) => setTimeout(resolve, ms));
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 const jitter = () => Math.random() * 250;
-
-function transportDelay(attempt: number, err: ApiError): number {
-  if (err.retryAfterMs) return err.retryAfterMs + jitter(); // obey the server
-  return Math.min(500 * 2 ** attempt, 4000) + jitter();
-}
 
 function chunkIds(ids: string[], size: number): string[][] {
   const chunks: string[][] = [];
-  for (let i = 0; i < ids.length; i += size)
-    chunks.push(ids.slice(i, i + size));
+  for (let i = 0; i < ids.length; i += size) chunks.push(ids.slice(i, i + size));
   return chunks;
 }
 
 /** At most `limit` workers pull from a shared queue. */
-async function runPool<T>(
-  items: T[],
-  limit: number,
-  worker: (item: T) => Promise<void>,
-) {
+async function runPool<T>(items: T[], limit: number, worker: (item: T) => Promise<void>) {
   let next = 0;
-  const lanes = Array.from(
-    { length: Math.min(limit, items.length) },
-    async () => {
-      while (next < items.length) {
-        const item = items[next++] as T;
-        await worker(item);
-      }
-    },
-  );
+  const lanes = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const item = items[next++] as T;
+      await worker(item);
+    }
+  });
   await Promise.all(lanes);
 }
 
 /** Layer 1: the whole request failed for a transient reason, so resend it. */
-async function sendChunk(
-  ids: string[],
-  status: AssetStatus,
-): Promise<BulkResult> {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      return await bulkSetStatus(ids, status);
-    } catch (err) {
-      if (
-        !(err instanceof ApiError) ||
-        !err.retryable ||
-        attempt >= MAX_TRANSPORT_ATTEMPTS - 1
-      ) {
-        throw err;
-      }
-      await sleep(transportDelay(attempt, err));
-    }
-  }
-}
+const sendChunk = (ids: string[], status: AssetStatus): Promise<BulkResult> =>
+  withRetry(() => bulkSetStatus(ids, status));
 
 /** Layer 2: the request worked but some ids hit a random conflict, so resend only those. */
-async function processChunk(
-  chunk: string[],
-  status: AssetStatus,
-  out: BulkOutcome,
-) {
+async function processChunk(chunk: string[], status: AssetStatus, out: BulkOutcome) {
   let pending = chunk;
   for (let pass = 0; pass < MAX_CONFLICT_PASSES && pending.length > 0; pass++) {
     if (pass > 0) await sleep(300 * pass + jitter());
@@ -97,8 +62,8 @@ async function processChunk(
       for (const id of pending) {
         out.failed.push({
           id,
-          code: apiError?.code ?? "unknown",
-          message: apiError?.message ?? "Unexpected error.",
+          code: apiError?.code ?? 'unknown',
+          message: apiError?.message ?? 'Unexpected error.',
           retryable: apiError?.retryable ?? false,
         });
       }
@@ -108,26 +73,15 @@ async function processChunk(
     const conflicted: string[] = [];
     for (const r of result.results) {
       if (r.ok) out.applied.push(r.asset);
-      else if (r.code === "conflict") conflicted.push(r.id);
-      else
-        out.failed.push({
-          id: r.id,
-          code: r.code,
-          message: r.message ?? "",
-          retryable: false,
-        });
+      else if (r.code === 'conflict') conflicted.push(r.id);
+      else out.failed.push({ id: r.id, code: r.code, message: r.message ?? '', retryable: false });
     }
     pending = conflicted;
   }
 
   // Still conflicting after every pass. Temporary, so the user may try again.
   for (const id of pending) {
-    out.failed.push({
-      id,
-      code: "conflict",
-      message: "Write conflict.",
-      retryable: true,
-    });
+    out.failed.push({ id, code: 'conflict', message: 'Write conflict.', retryable: true });
   }
 }
 

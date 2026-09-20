@@ -3,6 +3,7 @@ import { ApiError, getAsset, updateAsset } from "@/api/client";
 import { withRetry } from "@/api/retry";
 import type { Asset, AssetStatus } from "@/lib/types";
 import { applyOptimisticStatus, patchAssetsInCache } from "./AssetCache";
+import { isOffline } from '@/api/online';
 
 export const assetKey = (id: string) => ["asset", id] as const;
 
@@ -21,6 +22,13 @@ export async function saveStatus(
   wanted: AssetStatus,
 ): Promise<EditResult> {
   const id = base.id;
+    // No network: don't flip anything we'd only have to flip back.
+  if (isOffline()) {
+    return {
+      kind: 'failed',
+      error: new ApiError({ status: 0, code: 'offline', message: 'You are offline.' }),
+    };
+  }
 
   // A refetch already in flight would overwrite our optimistic value with old data.
   await qc.cancelQueries({ queryKey: assetKey(id) });
