@@ -1,7 +1,8 @@
-import { memo, useState } from "react";
-import { thumbnailUrl } from "@/api/client";
-import { formatBytes, formatDate, statusLabel } from "@/lib/format";
-import type { Asset } from "@/lib/types";
+import { memo, useRef, useState } from 'react';
+import { thumbnailUrl } from '@/api/client';
+import { formatBytes, formatDate, statusLabel } from '@/lib/format';
+import type { Asset } from '@/lib/types';
+import type { SelectMode } from './gridLayout';
 
 function Thumb({ asset }: { asset: Asset }) {
   const [failed, setFailed] = useState(false);
@@ -28,39 +29,38 @@ function Thumb({ asset }: { asset: Asset }) {
 
 interface Props {
   asset: Asset;
+  index: number; // position in the loaded list, used by the keyboard handler
+  colIndex: number; // 1-based, for aria-colindex
   selected: boolean;
   active: boolean;
-  x: number;
-  y: number;
+  tabbable: boolean; // the roving tab stop
+  x: number; // left offset inside its row
   width: number;
   height: number;
-  onToggleSelect: (id: string, extend: boolean) => void;
+  onSelect: (id: string, mode: SelectMode, fromId?: string) => void;
   onOpen: (id: string) => void;
 }
 
-/**
- * Every prop is a primitive, the asset object, or a stable callback, so memo
- * can skip the card unless something about this card actually changed.
- */
+/** Every prop is a primitive or a stable callback, so memo skips unchanged cards. */
 export const AssetCard = memo(function AssetCard({
-  asset,
-  selected,
-  active,
-  x,
-  y,
-  width,
-  height,
-  onToggleSelect,
-  onOpen,
+  asset, index, colIndex, selected, active, tabbable, x, width, height, onSelect, onOpen,
 }: Props) {
+  const cellRef = useRef<HTMLDivElement>(null);
   return (
     <div
-      className={
-        "card" +
-        (selected ? " card--selected" : "") +
-        (active ? " card--active" : "")
-      }
-      style={{ transform: `translate(${x}px, ${y}px)`, width, height }}
+      ref={cellRef}
+      role="gridcell"
+      aria-colindex={colIndex}
+      aria-selected={selected}
+      aria-current={active ? 'true' : undefined}
+      aria-label={`${asset.name}, ${asset.kind}, ${statusLabel(asset.status)}, ${formatBytes(
+        asset.sizeBytes,
+      )}, updated ${formatDate(asset.updatedAt)}`}
+      data-index={index}
+      data-asset-id={asset.id}
+      tabIndex={tabbable ? 0 : -1}
+      className={'card' + (selected ? ' card--selected' : '') + (active ? ' card--active' : '')}
+      style={{ transform: `translateX(${x}px)`, width, height }}
       onClick={() => onOpen(asset.id)}
     >
       <Thumb asset={asset} />
@@ -69,23 +69,23 @@ export const AssetCard = memo(function AssetCard({
           {asset.name}
         </p>
         <p className="muted card__meta">
-          {asset.kind} · {formatBytes(asset.sizeBytes)} ·{" "}
-          {formatDate(asset.updatedAt)}
+          {asset.kind} · {formatBytes(asset.sizeBytes)} · {formatDate(asset.updatedAt)}
         </p>
-        <span className={`pill pill--${asset.status}`}>
-          {statusLabel(asset.status)}
-        </span>
+        <span className={`pill pill--${asset.status}`}>{statusLabel(asset.status)}</span>
       </div>
       <input
         type="checkbox"
         className="card__check"
+        tabIndex={-1} // not a tab stop, Space on the card does the same job
+        aria-label={`Select ${asset.name}`}
         checked={selected}
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          // Keep the keyboard model working after a mouse click.
+          cellRef.current?.focus({ preventScroll: true });
+        }}
         onChange={(e) =>
-          onToggleSelect(
-            asset.id,
-            (e.nativeEvent as MouseEvent).shiftKey === true,
-          )
+          onSelect(asset.id, (e.nativeEvent as MouseEvent).shiftKey ? 'extend' : 'toggle')
         }
       />
     </div>

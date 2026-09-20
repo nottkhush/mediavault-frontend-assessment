@@ -22,3 +22,5 @@ export function computeLayout(width: number): GridLayout {
   const cardHeight = Math.round((colWidth - 2) * 0.625) + BODY_H + 2;
   return { cols, colWidth, cardHeight, stride: cardHeight + GAP };
 }
+
+export type SelectMode = 'toggle' | 'extend' | 'anchor';
