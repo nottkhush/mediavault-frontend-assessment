@@ -6,6 +6,7 @@ import { useAssets } from "@/features/assets/useAssets";
 import { statusLabel } from "@/lib/format";
 import type { Asset, AssetStatus, AssetQuery } from "@/lib/types";
 import { useViewQuery } from "@/features/assets/urlState";
+import { useSearchDraft } from "@/features/assets/useSearchDraft";
 
 const STATUSES: AssetStatus[] = ["draft", "in_review", "approved", "archived"];
 const SORTS: Array<{ value: NonNullable<AssetQuery["sort"]>; label: string }> =
@@ -18,7 +19,10 @@ const SORTS: Array<{ value: NonNullable<AssetQuery["sort"]>; label: string }> =
 
 export function App() {
   const [view, updateView] = useViewQuery();
-  const { q, status, sort } = view;
+  const { status, sort } = view;
+  const [searchText, setSearchText] = useSearchDraft(view.q, (next) =>
+    updateView({ q: next }, "replace"),
+  );
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [activeId, setActiveId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -60,8 +64,8 @@ export function App() {
           className="search"
           type="search"
           placeholder="Search assets"
-          value={q}
-          onChange={(e) => updateView({ q: e.target.value }, "replace")}
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
         />
         <select
           value={sort}
