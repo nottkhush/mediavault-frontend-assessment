@@ -1,7 +1,7 @@
-import { memo, useState } from 'react';
-import { thumbnailUrl } from '@/api/client';
-import { formatBytes, formatDate, statusLabel } from '@/lib/format';
-import type { Asset } from '@/lib/types';
+import { memo, useState } from "react";
+import { thumbnailUrl } from "@/api/client";
+import { formatBytes, formatDate, statusLabel } from "@/lib/format";
+import type { Asset } from "@/lib/types";
 
 function Thumb({ asset }: { asset: Asset }) {
   const [failed, setFailed] = useState(false);
@@ -15,7 +15,7 @@ function Thumb({ asset }: { asset: Asset }) {
     );
   }
   return (
-        <img
+    <img
       className="card__thumb"
       src={thumbnailUrl(asset.id)}
       alt=""
@@ -34,7 +34,7 @@ interface Props {
   y: number;
   width: number;
   height: number;
-  onToggleSelect: (id: string) => void;
+  onToggleSelect: (id: string, extend: boolean) => void;
   onOpen: (id: string) => void;
 }
 
@@ -43,11 +43,23 @@ interface Props {
  * can skip the card unless something about this card actually changed.
  */
 export const AssetCard = memo(function AssetCard({
-  asset, selected, active, x, y, width, height, onToggleSelect, onOpen,
+  asset,
+  selected,
+  active,
+  x,
+  y,
+  width,
+  height,
+  onToggleSelect,
+  onOpen,
 }: Props) {
   return (
     <div
-      className={'card' + (selected ? ' card--selected' : '') + (active ? ' card--active' : '')}
+      className={
+        "card" +
+        (selected ? " card--selected" : "") +
+        (active ? " card--active" : "")
+      }
       style={{ transform: `translate(${x}px, ${y}px)`, width, height }}
       onClick={() => onOpen(asset.id)}
     >
@@ -57,16 +69,24 @@ export const AssetCard = memo(function AssetCard({
           {asset.name}
         </p>
         <p className="muted card__meta">
-          {asset.kind} · {formatBytes(asset.sizeBytes)} · {formatDate(asset.updatedAt)}
+          {asset.kind} · {formatBytes(asset.sizeBytes)} ·{" "}
+          {formatDate(asset.updatedAt)}
         </p>
-        <span className={`pill pill--${asset.status}`}>{statusLabel(asset.status)}</span>
+        <span className={`pill pill--${asset.status}`}>
+          {statusLabel(asset.status)}
+        </span>
       </div>
       <input
         type="checkbox"
         className="card__check"
         checked={selected}
         onClick={(e) => e.stopPropagation()}
-        onChange={() => onToggleSelect(asset.id)}
+        onChange={(e) =>
+          onToggleSelect(
+            asset.id,
+            (e.nativeEvent as MouseEvent).shiftKey === true,
+          )
+        }
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import type { Asset, AssetPage, AssetQuery, BulkResult } from '@/lib/types';
+import type { Asset, AssetPage, AssetQuery, BulkResult } from "@/lib/types";
 
 /**
  * A structured API error. Callers branch on `status` and `code`, never on
@@ -19,7 +19,7 @@ export class ApiError extends Error {
     requestId?: string | null;
   }) {
     super(init.message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
     this.status = init.status;
     this.code = init.code;
     this.retryAfterMs = init.retryAfterMs ?? null;
@@ -32,13 +32,13 @@ export class ApiError extends Error {
       this.status === 0 ||
       this.status === 429 ||
       this.status === 503 ||
-      this.code === 'write_failed'
+      this.code === "write_failed"
     );
   }
 }
 
 export const isAbortError = (err: unknown): boolean =>
-  err instanceof DOMException && err.name === 'AbortError';
+  err instanceof DOMException && err.name === "AbortError";
 
 function parseRetryAfter(header: string | null): number | null {
   if (!header) return null;
@@ -51,20 +51,20 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   try {
     res = await fetch(path, {
       ...init,
-      headers: { 'content-type': 'application/json', ...(init.headers ?? {}) },
+      headers: { "content-type": "application/json", ...(init.headers ?? {}) },
     });
   } catch (err) {
     // An abort is intentional, so it must not look like a failure.
     if (isAbortError(err)) throw err;
     throw new ApiError({
       status: 0,
-      code: 'network_error',
-      message: 'Could not reach the server.',
+      code: "network_error",
+      message: "Could not reach the server.",
     });
   }
 
   if (!res.ok) {
-    let code = 'unknown';
+    let code = "unknown";
     let message = res.statusText;
     try {
       const body = await res.json();
@@ -77,8 +77,8 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       status: res.status,
       code,
       message,
-      retryAfterMs: parseRetryAfter(res.headers.get('retry-after')),
-      requestId: res.headers.get('x-request-id'),
+      retryAfterMs: parseRetryAfter(res.headers.get("retry-after")),
+      requestId: res.headers.get("x-request-id"),
     });
   }
   return res.json() as Promise<T>;
@@ -92,22 +92,25 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 export function toSearchParams(query: AssetQuery): string {
   const params = new URLSearchParams();
   const list = (key: string, values?: string[]) => {
-    if (values?.length) params.set(key, [...values].sort().join(','));
+    if (values?.length) params.set(key, [...values].sort().join(","));
   };
   const q = query.q?.trim();
-  if (q) params.set('q', q);
-  list('status', query.status);
-  list('kind', query.kind);
-  list('tag', query.tag);
-  if (query.collectionId) params.set('collectionId', query.collectionId);
-  if (query.owner) params.set('owner', query.owner);
-  params.set('sort', query.sort ?? 'updatedAt:desc');
-  if (query.limit) params.set('limit', String(query.limit));
-  if (query.cursor) params.set('cursor', query.cursor);
+  if (q) params.set("q", q);
+  list("status", query.status);
+  list("kind", query.kind);
+  list("tag", query.tag);
+  if (query.collectionId) params.set("collectionId", query.collectionId);
+  if (query.owner) params.set("owner", query.owner);
+  params.set("sort", query.sort ?? "updatedAt:desc");
+  if (query.limit) params.set("limit", String(query.limit));
+  if (query.cursor) params.set("cursor", query.cursor);
   return params.toString();
 }
 
-export function listAssets(query: AssetQuery, signal?: AbortSignal): Promise<AssetPage> {
+export function listAssets(
+  query: AssetQuery,
+  signal?: AbortSignal,
+): Promise<AssetPage> {
   return request<AssetPage>(`/api/assets?${toSearchParams(query)}`, { signal });
 }
 
@@ -120,17 +123,17 @@ export function getAssetsByIds(
   signal?: AbortSignal,
 ): Promise<{ items: Asset[]; missing: string[] }> {
   // The endpoint rejects more than 25 ids per call. Callers must chunk.
-  return request(`/api/assets/batch?ids=${ids.join(',')}`, { signal });
+  return request(`/api/assets/batch?ids=${ids.join(",")}`, { signal });
 }
 
 export function updateAsset(
   id: string,
   version: number,
-  patch: Partial<Pick<Asset, 'name' | 'status' | 'tags'>>,
+  patch: Partial<Pick<Asset, "name" | "status" | "tags">>,
   signal?: AbortSignal,
 ): Promise<Asset> {
   return request<Asset>(`/api/assets/${id}`, {
-    method: 'PATCH',
+    method: "PATCH",
     body: JSON.stringify({ version, patch }),
     signal,
   });
@@ -138,12 +141,12 @@ export function updateAsset(
 
 export function bulkSetStatus(
   ids: string[],
-  status: Asset['status'],
+  status: Asset["status"],
   signal?: AbortSignal,
 ): Promise<BulkResult> {
   // The endpoint rejects more than 50 ids per call. Callers must chunk.
-  return request<BulkResult>('/api/assets/bulk-status', {
-    method: 'POST',
+  return request<BulkResult>("/api/assets/bulk-status", {
+    method: "POST",
     body: JSON.stringify({ ids, status }),
     signal,
   });

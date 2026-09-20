@@ -1,8 +1,8 @@
-import { useMemo } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
-import { listAssets, toSearchParams } from '@/api/client';
-import type { Asset } from '@/lib/types';
-import type { ViewQuery } from './urlState';
+import { useMemo } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { listAssets, toSearchParams } from "@/api/client";
+import type { Asset } from "@/lib/types";
+import type { ViewQuery } from "./urlState";
 
 // Under the server's cap of 50, and divisible by common column counts.
 export const PAGE_SIZE = 48;
@@ -12,10 +12,13 @@ export function useAssets(view: ViewQuery) {
   const key = toSearchParams({ ...view, limit: PAGE_SIZE });
 
   const query = useInfiniteQuery({
-    queryKey: ['assets', key],
+    queryKey: ["assets", key],
     initialPageParam: null as string | null,
     queryFn: ({ pageParam, signal }) =>
-      listAssets({ ...view, limit: PAGE_SIZE, cursor: pageParam ?? undefined }, signal),
+      listAssets(
+        { ...view, limit: PAGE_SIZE, cursor: pageParam ?? undefined },
+        signal,
+      ),
     getNextPageParam: (last) => last.nextCursor ?? undefined,
   });
 
@@ -33,7 +36,8 @@ export function useAssets(view: ViewQuery) {
   const total = pages[pages.length - 1]?.total ?? 0;
 
   // A failed next-page fetch retries the next page. Anything else refetches from the top.
-  const retry = () => (query.isFetchNextPageError ? query.fetchNextPage() : query.refetch());
+  const retry = () =>
+    query.isFetchNextPageError ? query.fetchNextPage() : query.refetch();
 
   return {
     items,

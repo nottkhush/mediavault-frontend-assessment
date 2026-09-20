@@ -1,5 +1,5 @@
-export type AssetStatus = 'draft' | 'in_review' | 'approved' | 'archived';
-export type AssetKind = 'image' | 'video' | 'document';
+export type AssetStatus = "draft" | "in_review" | "approved" | "archived";
+export type AssetKind = "image" | "video" | "document";
 
 export interface Owner {
   id: string;
@@ -37,7 +37,13 @@ export interface AssetQuery {
   tag?: string[];
   collectionId?: string;
   owner?: string;
-  sort?: 'updatedAt:desc' | 'updatedAt:asc' | 'name:asc' | 'name:desc' | 'sizeBytes:desc' | 'createdAt:desc';
+  sort?:
+    | "updatedAt:desc"
+    | "updatedAt:asc"
+    | "name:asc"
+    | "name:desc"
+    | "sizeBytes:desc"
+    | "createdAt:desc";
   limit?: number;
   cursor?: string;
 }

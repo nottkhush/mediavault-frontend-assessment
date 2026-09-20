@@ -15,7 +15,11 @@
 
 body {
   margin: 0;
-  font: 15px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font:
+    15px/1.5 system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
   color: var(--ink);
   background: var(--bg);
 }
@@ -392,4 +396,29 @@ button:disabled {
   flex-wrap: wrap;
   gap: 8px 12px;
   align-items: center;
+}
+.card {
+  user-select: none; /* shift-click must select rows, not highlight text */
+}
+.panel__thumb {
+  display: block;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+}
+.panel__thumb--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.panel__alert {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg-soft);
+}
+.panel__alert p {
+  margin: 0 0 8px;
 }

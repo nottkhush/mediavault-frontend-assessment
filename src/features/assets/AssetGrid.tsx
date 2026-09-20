@@ -1,13 +1,20 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { Asset } from '@/lib/types';
-import { AssetCard } from './AssetCard';
-import { computeLayout, FOOTER_H, GAP, OVERSCAN, PAD, PREFETCH_ROWS } from './gridLayout';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { Asset } from "@/lib/types";
+import { AssetCard } from "./AssetCard";
+import {
+  computeLayout,
+  FOOTER_H,
+  GAP,
+  OVERSCAN,
+  PAD,
+  PREFETCH_ROWS,
+} from "./gridLayout";
 
 interface Props {
   assets: Asset[];
   selectedIds: Set<string>;
   activeId: string | null;
-  onToggleSelect: (id: string) => void;
+  onToggleSelect: (id: string, extend: boolean) => void;
   onOpen: (id: string) => void;
   hasMore: boolean;
   loadingMore: boolean;
@@ -16,8 +23,15 @@ interface Props {
 }
 
 export function AssetGrid({
-  assets, selectedIds, activeId, onToggleSelect, onOpen,
-  hasMore, loadingMore, loadFailed, onLoadMore,
+  assets,
+  selectedIds,
+  activeId,
+  onToggleSelect,
+  onOpen,
+  hasMore,
+  loadingMore,
+  loadFailed,
+  onLoadMore,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -40,7 +54,10 @@ export function AssetGrid({
   }, []);
 
   const ready = size.w > 0;
-  const { cols, colWidth, cardHeight, stride } = useMemo(() => computeLayout(size.w), [size.w]);
+  const { cols, colWidth, cardHeight, stride } = useMemo(
+    () => computeLayout(size.w),
+    [size.w],
+  );
   const rowCount = Math.ceil(assets.length / cols);
 
   // When the layout changes, keep the same item at the top, not the same pixel offset.
@@ -109,11 +126,11 @@ export function AssetGrid({
             role="status"
           >
             {loadFailed
-              ? ''
+              ? ""
               : loadingMore
-                ? 'Loading more…'
+                ? "Loading more…"
                 : hasMore
-                  ? ''
+                  ? ""
                   : `All ${assets.length.toLocaleString()} assets loaded`}
           </div>
         )}

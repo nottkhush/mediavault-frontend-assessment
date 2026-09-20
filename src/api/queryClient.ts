@@ -1,5 +1,5 @@
-import { QueryClient } from '@tanstack/react-query';
-import { ApiError } from './client';
+import { QueryClient } from "@tanstack/react-query";
+import { ApiError } from "./client";
 
 const MAX_RETRIES = 3;
 
@@ -11,7 +11,9 @@ export const queryClient = new QueryClient({
       // which is expensive under an 80 requests per 10s budget.
       refetchOnWindowFocus: false,
       retry: (failureCount, error) =>
-        error instanceof ApiError && error.retryable && failureCount < MAX_RETRIES,
+        error instanceof ApiError &&
+        error.retryable &&
+        failureCount < MAX_RETRIES,
       retryDelay: (attempt, error) => {
         const jitter = Math.random() * 250;
         if (error instanceof ApiError && error.retryAfterMs) {

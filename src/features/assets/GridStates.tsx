@@ -1,10 +1,10 @@
-import { describeError, errorReference } from '@/lib/errors';
+import { describeError, errorReference } from "@/lib/errors";
 
 export function GridSkeleton({ retrying }: { retrying: boolean }) {
   return (
     <div className="grid" aria-busy="true">
       <p className="muted grid__status" role="status">
-        {retrying ? 'Taking longer than usual. Retrying…' : 'Loading assets…'}
+        {retrying ? "Taking longer than usual. Retrying…" : "Loading assets…"}
       </p>
       {Array.from({ length: 12 }, (_, i) => (
         <div key={i} className="card card--skeleton" aria-hidden="true">
@@ -22,7 +22,7 @@ export function GridSkeleton({ retrying }: { retrying: boolean }) {
 export function GridEmpty({ q, onClear }: { q: string; onClear: () => void }) {
   return (
     <div className="empty">
-      <p>{q ? `No assets match “${q}”.` : 'No assets match these filters.'}</p>
+      <p>{q ? `No assets match “${q}”.` : "No assets match these filters."}</p>
       <p className="muted">Try a shorter search or fewer filters.</p>
       <div className="row">
         <button onClick={onClear}>Clear search and filters</button>
@@ -31,7 +31,13 @@ export function GridEmpty({ q, onClear }: { q: string; onClear: () => void }) {
   );
 }
 
-export function GridError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
+export function GridError({
+  error,
+  onRetry,
+}: {
+  error: unknown;
+  onRetry: () => void;
+}) {
   const ref = errorReference(error);
   return (
     <div className="empty" role="alert">
