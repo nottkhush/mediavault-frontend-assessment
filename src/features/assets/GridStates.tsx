@@ -2,7 +2,7 @@ import { describeError, errorReference } from "@/lib/errors";
 
 export function GridSkeleton({ retrying, offline }: { retrying: boolean; offline: boolean }) {
   return (
-    <div className="grid" aria-busy="true">
+        <div className="empty empty--error" role="alert">
       <p className="muted grid__status" role="status">
         {offline
           ? "You're offline. Assets will load when you reconnect."

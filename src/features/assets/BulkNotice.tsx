@@ -51,9 +51,13 @@ export function BulkNotice({ state, onRetry, onDismiss }: Props) {
   }
 
   const { text, retryable } = summarise(state);
+  const clean = state.failed.length === 0;
   return (
-    <p className="notice">
-      {text}
+    <p className={`notice ${clean ? 'notice--ok' : 'notice--warn'}`}>
+      <span className="notice__icon" aria-hidden="true">
+        {clean ? '✓' : '!'}
+      </span>
+      <span>{text}</span>
       {retryable > 0 && <button onClick={onRetry}>Retry {retryable.toLocaleString()}</button>}
       <button onClick={onDismiss}>Dismiss</button>
     </p>

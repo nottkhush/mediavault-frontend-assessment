@@ -118,13 +118,21 @@ export function AssetDetail({ id, onClose }: Props) {
             </ul>
           )}
 
-          <p className="muted">Status</p>
-          <div className="row">
+                    <p className="muted" id="status-label">
+            Status
+          </p>
+          <div className="segmented" role="group" aria-labelledby="status-label">
             {STATUSES.map((status) => (
               <button
                 key={status}
-                disabled={saving || status === asset.status}
-                onClick={() => change(status, asset)}
+                type="button"
+                className="segmented__btn"
+                aria-pressed={status === asset.status}
+                aria-disabled={saving}
+                onClick={() => {
+                  if (saving || status === asset.status) return;
+                  void change(status, asset);
+                }}
               >
                 {statusLabel(status)}
               </button>

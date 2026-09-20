@@ -3,6 +3,7 @@ import { thumbnailUrl } from '@/api/client';
 import { formatBytes, formatDate, statusLabel } from '@/lib/format';
 import type { Asset } from '@/lib/types';
 import type { SelectMode } from './gridLayout';
+import { StatusPill } from './StatusPill';
 
 function Thumb({ asset }: { asset: Asset }) {
   const [failed, setFailed] = useState(false);
@@ -71,7 +72,7 @@ export const AssetCard = memo(function AssetCard({
         <p className="muted card__meta">
           {asset.kind} · {formatBytes(asset.sizeBytes)} · {formatDate(asset.updatedAt)}
         </p>
-        <span className={`pill pill--${asset.status}`}>{statusLabel(asset.status)}</span>
+        <StatusPill status={asset.status} />
       </div>
       <input
         type="checkbox"
