@@ -5,7 +5,7 @@ import { AssetGrid } from '@/features/assets/AssetGrid';
 import {
   applyOptimisticStatus,
   patchAssetsInCache,
-} from '@/features/assets/AssetCache';
+} from '@/features/assets/assetCache';
 import { runBulkStatus } from '@/features/assets/bulk';
 import type { BulkOutcome, BulkState } from '@/features/assets/bulk';
 import { BulkNotice } from '@/features/assets/BulkNotice';
@@ -17,7 +17,7 @@ import { describeError } from '@/lib/errors';
 import { statusLabel } from '@/lib/format';
 import type { Asset, AssetStatus, AssetQuery } from '@/lib/types';
 import { isOffline, useOnline } from '@/api/online';
-import { ConnectionBanner } from '@/components/connectionBanner';
+import { ConnectionBanner } from '@/components/ConnectionBanner';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const STATUSES: AssetStatus[] = ['draft', 'in_review', 'approved', 'archived'];

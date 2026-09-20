@@ -2,7 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { ApiError, getAsset, updateAsset } from "@/api/client";
 import { withRetry } from "@/api/retry";
 import type { Asset, AssetStatus } from "@/lib/types";
-import { applyOptimisticStatus, patchAssetsInCache } from "./AssetCache";
+import { applyOptimisticStatus, patchAssetsInCache } from "./assetCache";
 import { isOffline } from '@/api/online';
 
 export const assetKey = (id: string) => ["asset", id] as const;
