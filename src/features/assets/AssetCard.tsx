@@ -15,12 +15,10 @@ function Thumb({ asset }: { asset: Asset }) {
     );
   }
   return (
-    <img
+        <img
       className="card__thumb"
       src={thumbnailUrl(asset.id)}
       alt=""
-      width={320}
-      height={200}
       loading="lazy"
       decoding="async"
       onError={() => setFailed(true)}
