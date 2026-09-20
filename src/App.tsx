@@ -1,29 +1,29 @@
-import { useState } from 'react';
-import { bulkSetStatus } from '@/api/client';
-import { AssetDetail } from '@/features/assets/AssetDetail';
-import { AssetGrid } from '@/features/assets/AssetGrid';
-import { useAssets } from '@/features/assets/useAssets';
-import { statusLabel } from '@/lib/format';
-import type { Asset, AssetStatus, AssetQuery } from '@/lib/types';
+import { useState } from "react";
+import { bulkSetStatus } from "@/api/client";
+import { AssetDetail } from "@/features/assets/AssetDetail";
+import { AssetGrid } from "@/features/assets/AssetGrid";
+import { useAssets } from "@/features/assets/useAssets";
+import { statusLabel } from "@/lib/format";
+import type { Asset, AssetStatus, AssetQuery } from "@/lib/types";
+import { useViewQuery } from "@/features/assets/urlState";
 
-const STATUSES: AssetStatus[] = ['draft', 'in_review', 'approved', 'archived'];
-const SORTS: Array<{ value: NonNullable<AssetQuery['sort']>; label: string }> = [
-  { value: 'updatedAt:desc', label: 'Recently updated' },
-  { value: 'name:asc', label: 'Name A–Z' },
-  { value: 'sizeBytes:desc', label: 'Largest first' },
-  { value: 'createdAt:desc', label: 'Newest' },
-];
+const STATUSES: AssetStatus[] = ["draft", "in_review", "approved", "archived"];
+const SORTS: Array<{ value: NonNullable<AssetQuery["sort"]>; label: string }> =
+  [
+    { value: "updatedAt:desc", label: "Recently updated" },
+    { value: "name:asc", label: "Name A–Z" },
+    { value: "sizeBytes:desc", label: "Largest first" },
+    { value: "createdAt:desc", label: "Newest" },
+  ];
 
 export function App() {
-  const [q, setQ] = useState('');
-  const [status, setStatus] = useState<AssetStatus[]>([]);
-  const [sort, setSort] = useState<NonNullable<AssetQuery['sort']>>('updatedAt:desc');
+  const [view, updateView] = useViewQuery();
+  const { q, status, sort } = view;
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [activeId, setActiveId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  // Every keystroke sends a request. Nothing is debounced or cancelled.
-  const { items, total, loading, error } = useAssets({ q, status, sort, limit: 24 });
+  const { items, total, loading, error } = useAssets({ ...view, limit: 24 });
 
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
@@ -44,7 +44,7 @@ export function App() {
       setNotice(`${result.applied} updated, ${result.failed} failed.`);
       setSelectedIds(new Set());
     } catch (err) {
-      setNotice(err instanceof Error ? err.message : 'Bulk update failed');
+      setNotice(err instanceof Error ? err.message : "Bulk update failed");
     }
   }
 
@@ -61,9 +61,12 @@ export function App() {
           type="search"
           placeholder="Search assets"
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={(e) => updateView({ q: e.target.value }, "replace")}
         />
-        <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
+        <select
+          value={sort}
+          onChange={(e) => updateView({ sort: e.target.value as typeof sort })}
+        >
           {SORTS.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
@@ -79,16 +82,20 @@ export function App() {
               type="checkbox"
               checked={status.includes(s)}
               onChange={(e) =>
-                setStatus((prev) =>
-                  e.target.checked ? [...prev, s] : prev.filter((x) => x !== s),
-                )
+                updateView({
+                  status: e.target.checked
+                    ? [...status, s]
+                    : status.filter((x) => x !== s),
+                })
               }
             />
             {statusLabel(s)}
           </label>
         ))}
         <span className="muted">
-          {loading ? 'Loading…' : `${items.length} of ${total.toLocaleString()} shown`}
+          {loading
+            ? "Loading…"
+            : `${items.length} of ${total.toLocaleString()} shown`}
         </span>
       </div>
 
@@ -100,7 +107,9 @@ export function App() {
               Set {statusLabel(s).toLowerCase()}
             </button>
           ))}
-          <button onClick={() => setSelectedIds(new Set())}>Clear selection</button>
+          <button onClick={() => setSelectedIds(new Set())}>
+            Clear selection
+          </button>
         </div>
       )}
 
@@ -116,7 +125,11 @@ export function App() {
           onOpen={setActiveId}
         />
         {activeId && (
-          <AssetDetail id={activeId} onClose={() => setActiveId(null)} onSaved={handleSaved} />
+          <AssetDetail
+            id={activeId}
+            onClose={() => setActiveId(null)}
+            onSaved={handleSaved}
+          />
         )}
       </main>
     </div>
