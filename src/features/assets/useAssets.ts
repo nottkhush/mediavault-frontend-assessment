@@ -32,6 +32,9 @@ export function useAssets(view: ViewQuery) {
   const pages = query.data?.pages ?? [];
   const total = pages[pages.length - 1]?.total ?? 0;
 
+  // A failed next-page fetch retries the next page. Anything else refetches from the top.
+  const retry = () => (query.isFetchNextPageError ? query.fetchNextPage() : query.refetch());
+
   return {
     items,
     total,
@@ -40,5 +43,7 @@ export function useAssets(view: ViewQuery) {
     hasNextPage: query.hasNextPage,
     fetchNextPage: query.fetchNextPage,
     error: query.error,
+    failureCount: query.failureCount,
+    retry,
   };
 }

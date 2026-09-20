@@ -1,28 +1,30 @@
-import { useState } from "react";
-import { bulkSetStatus } from "@/api/client";
-import { AssetDetail } from "@/features/assets/AssetDetail";
-import { AssetGrid } from "@/features/assets/AssetGrid";
-import { useAssets } from "@/features/assets/useAssets";
-import { statusLabel } from "@/lib/format";
-import type { Asset, AssetStatus, AssetQuery } from "@/lib/types";
-import { useViewQuery } from "@/features/assets/urlState";
-import { useSearchDraft } from "@/features/assets/useSearchDraft";
+import { useState } from 'react';
+import { bulkSetStatus } from '@/api/client';
+import { AssetDetail } from '@/features/assets/AssetDetail';
+import { AssetGrid } from '@/features/assets/AssetGrid';
+import { GridEmpty, GridError, GridSkeleton } from '@/features/assets/GridStates';
+import { useAssets } from '@/features/assets/useAssets';
+import { useSearchDraft } from '@/features/assets/useSearchDraft';
+import { useViewQuery } from '@/features/assets/urlState';
+import { describeError } from '@/lib/errors';
+import { statusLabel } from '@/lib/format';
+import type { Asset, AssetStatus, AssetQuery } from '@/lib/types';
 
-const STATUSES: AssetStatus[] = ["draft", "in_review", "approved", "archived"];
-const SORTS: Array<{ value: NonNullable<AssetQuery["sort"]>; label: string }> =
-  [
-    { value: "updatedAt:desc", label: "Recently updated" },
-    { value: "name:asc", label: "Name A–Z" },
-    { value: "sizeBytes:desc", label: "Largest first" },
-    { value: "createdAt:desc", label: "Newest" },
-  ];
+const STATUSES: AssetStatus[] = ['draft', 'in_review', 'approved', 'archived'];
+const SORTS: Array<{ value: NonNullable<AssetQuery['sort']>; label: string }> = [
+  { value: 'updatedAt:desc', label: 'Recently updated' },
+  { value: 'name:asc', label: 'Name A–Z' },
+  { value: 'sizeBytes:desc', label: 'Largest first' },
+  { value: 'createdAt:desc', label: 'Newest' },
+];
 
 export function App() {
   const [view, updateView] = useViewQuery();
   const { status, sort } = view;
   const [searchText, setSearchText] = useSearchDraft(view.q, (next) =>
-    updateView({ q: next }, "replace"),
+    updateView({ q: next }, 'replace'),
   );
+
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [activeId, setActiveId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -35,6 +37,8 @@ export function App() {
     hasNextPage,
     fetchNextPage,
     error,
+    failureCount,
+    retry,
   } = useAssets(view);
 
   function toggleSelect(id: string) {
@@ -44,6 +48,10 @@ export function App() {
       else next.add(id);
       return next;
     });
+  }
+
+  function clearFilters() {
+    updateView({ q: '', status: [], kind: [], tag: [], collectionId: '', owner: '' });
   }
 
   async function applyBulkStatus(next: AssetStatus) {
@@ -56,7 +64,7 @@ export function App() {
       setNotice(`${result.applied} updated, ${result.failed} failed.`);
       setSelectedIds(new Set());
     } catch (err) {
-      setNotice(err instanceof Error ? err.message : "Bulk update failed");
+      setNotice(err instanceof Error ? err.message : 'Bulk update failed');
     }
   }
 
@@ -95,9 +103,7 @@ export function App() {
               checked={status.includes(s)}
               onChange={(e) =>
                 updateView({
-                  status: e.target.checked
-                    ? [...status, s]
-                    : status.filter((x) => x !== s),
+                  status: e.target.checked ? [...status, s] : status.filter((x) => x !== s),
                 })
               }
             />
@@ -106,12 +112,14 @@ export function App() {
         ))}
         <span className="muted">
           {isPending
-            ? "Loading…"
-            : `${items.length} of ${total.toLocaleString()} shown`}
+            ? 'Loading…'
+            : error && items.length === 0
+              ? ''
+              : `${items.length} of ${total.toLocaleString()} shown`}
         </span>
         {hasNextPage && (
           <button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
-            {isFetchingNextPage ? "Loading…" : "Load more"}
+            {isFetchingNextPage ? 'Loading…' : 'Load more'}
           </button>
         )}
       </div>
@@ -124,29 +132,36 @@ export function App() {
               Set {statusLabel(s).toLowerCase()}
             </button>
           ))}
-          <button onClick={() => setSelectedIds(new Set())}>
-            Clear selection
-          </button>
+          <button onClick={() => setSelectedIds(new Set())}>Clear selection</button>
         </div>
       )}
 
       {notice && <p className="notice">{notice}</p>}
-      {error && <p className="error">{error.message}</p>}
+      {error && items.length > 0 && (
+        <p className="error error--banner" role="alert">
+          {describeError(error)}
+          <button onClick={retry}>Try again</button>
+        </p>
+      )}
 
       <main className="content">
-        <AssetGrid
-          assets={items}
-          selectedIds={selectedIds}
-          activeId={activeId}
-          onToggleSelect={toggleSelect}
-          onOpen={setActiveId}
-        />
-        {activeId && (
-          <AssetDetail
-            id={activeId}
-            onClose={() => setActiveId(null)}
-            onSaved={handleSaved}
+        {isPending ? (
+          <GridSkeleton retrying={failureCount > 0} />
+        ) : error && items.length === 0 ? (
+          <GridError error={error} onRetry={retry} />
+        ) : items.length === 0 ? (
+          <GridEmpty q={view.q} onClear={clearFilters} />
+        ) : (
+          <AssetGrid
+            assets={items}
+            selectedIds={selectedIds}
+            activeId={activeId}
+            onToggleSelect={toggleSelect}
+            onOpen={setActiveId}
           />
+        )}
+        {activeId && (
+          <AssetDetail id={activeId} onClose={() => setActiveId(null)} onSaved={handleSaved} />
         )}
       </main>
     </div>

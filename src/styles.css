@@ -269,3 +269,45 @@ button:disabled {
     border-top: 1px solid var(--line);
   }
 }
+.grid__status {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.card--skeleton {
+  cursor: default;
+}
+.card--skeleton .card__thumb,
+.skeleton-line {
+  animation: pulse 1.4s ease-in-out infinite;
+}
+.skeleton-line {
+  display: block;
+  width: 70%;
+  height: 12px;
+  margin: 6px 0;
+  border-radius: 4px;
+  background: var(--bg-soft);
+}
+.skeleton-line--short {
+  width: 40%;
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card--skeleton .card__thumb,
+  .skeleton-line {
+    animation: none;
+  }
+}
+.empty .row {
+  justify-content: center;
+  margin-top: 12px;
+}
+.error--banner {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}

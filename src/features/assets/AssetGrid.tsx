@@ -15,14 +15,7 @@ interface Props {
  * selection change, and is not reachable by keyboard.
  */
 export function AssetGrid({ assets, selectedIds, activeId, onToggleSelect, onOpen }: Props) {
-  if (assets.length === 0) {
-    return (
-      <div className="empty">
-        <p>Nothing matches these filters.</p>
-        <p className="muted">Clear the search box or widen the status filter.</p>
-      </div>
-    );
-  }
+  
 
   return (
     <div className="grid">
