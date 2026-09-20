@@ -434,3 +434,29 @@ button:disabled {
 .banner--online {
   background: #e6f4ea;
 }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.filters__group {
+  display: flex;
+  gap: 16px;
+}
+.vgrid__row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+.card:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  z-index: 1;
+}

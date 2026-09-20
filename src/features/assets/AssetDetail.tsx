@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAsset, thumbnailUrl } from "@/api/client";
 import { describeError } from "@/lib/errors";
@@ -10,6 +9,7 @@ import {
 } from "@/lib/format";
 import type { Asset, AssetStatus } from "@/lib/types";
 import { assetKey, saveStatus } from "./statusEdit";
+import { useEffect, useRef, useState } from 'react';
 
 const STATUSES: AssetStatus[] = ["draft", "in_review", "approved", "archived"];
 
@@ -36,6 +36,10 @@ export function AssetDetail({ id, onClose }: Props) {
     current: Asset;
     wanted: AssetStatus;
   } | null>(null);
+    const panelRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    panelRef.current?.focus(); // opening the panel moves focus into it
+  }, []);
 
   async function change(wanted: AssetStatus, from: Asset) {
     setSaving(true);
@@ -53,7 +57,7 @@ export function AssetDetail({ id, onClose }: Props) {
   }
 
   return (
-    <aside className="panel">
+        <aside ref={panelRef} className="panel" tabIndex={-1} aria-label="Asset detail">
       <div className="panel__head">
         <h2>Asset detail</h2>
         <button onClick={onClose}>Close</button>
