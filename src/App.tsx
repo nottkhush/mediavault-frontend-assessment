@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { bulkSetStatus } from '@/api/client';
 import { AssetDetail } from '@/features/assets/AssetDetail';
 import { AssetGrid } from '@/features/assets/AssetGrid';
@@ -9,6 +8,7 @@ import { useViewQuery } from '@/features/assets/urlState';
 import { describeError } from '@/lib/errors';
 import { statusLabel } from '@/lib/format';
 import type { Asset, AssetStatus, AssetQuery } from '@/lib/types';
+import { useCallback, useState } from 'react';
 
 const STATUSES: AssetStatus[] = ['draft', 'in_review', 'approved', 'archived'];
 const SORTS: Array<{ value: NonNullable<AssetQuery['sort']>; label: string }> = [
@@ -41,14 +41,14 @@ export function App() {
     retry,
   } = useAssets(view);
 
-  function toggleSelect(id: string) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
+  const toggleSelect = useCallback((id: string) => {
+  setSelectedIds((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  });
+}, []);
 
   function clearFilters() {
     updateView({ q: '', status: [], kind: [], tag: [], collectionId: '', owner: '' });
@@ -117,11 +117,7 @@ export function App() {
               ? ''
               : `${items.length} of ${total.toLocaleString()} shown`}
         </span>
-        {hasNextPage && (
-          <button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
-            {isFetchingNextPage ? 'Loading…' : 'Load more'}
-          </button>
-        )}
+        
       </div>
 
       {selectedIds.size > 0 && (
@@ -153,12 +149,16 @@ export function App() {
           <GridEmpty q={view.q} onClear={clearFilters} />
         ) : (
           <AssetGrid
-            assets={items}
-            selectedIds={selectedIds}
-            activeId={activeId}
-            onToggleSelect={toggleSelect}
-            onOpen={setActiveId}
-          />
+  assets={items}
+  selectedIds={selectedIds}
+  activeId={activeId}
+  onToggleSelect={toggleSelect}
+  onOpen={setActiveId}
+  hasMore={hasNextPage}
+  loadingMore={isFetchingNextPage}
+  loadFailed={Boolean(error)}
+  onLoadMore={fetchNextPage}
+/>
         )}
         {activeId && (
           <AssetDetail id={activeId} onClose={() => setActiveId(null)} onSaved={handleSaved} />
