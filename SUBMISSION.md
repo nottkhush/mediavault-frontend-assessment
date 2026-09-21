@@ -2,7 +2,7 @@
 
 ## Video walkthrough
 
-**Link:** **🟨 ADD:** paste the video link here once it is recorded.
+**Link:** https://drive.google.com/file/d/1CTqXbIdJ3P8o9TNha206ZqFTifBadLEg/view?usp=sharing
 
 ---
 
@@ -12,10 +12,11 @@
 - `npm run check:contrast` re-checks every colour pair in `styles.css` against WCAG (22 pairs, all pass).
 - I developed with `CHAOS=0 LATENCY=0` at times, but every check below was done with both on (the defaults).
 - Node 22.19 on macOS.
+- Not deployed. Run locally with `npm install && npm run dev`. I prioritised the tasks and the write-up over hosting.
 
 ## Time spent
 
-- Total: about ~13 hours over 7 days.
+- Total: about 13 hours over 7 days.
 - Reading the brief and the baseline, and the defect inventory: 2 h
 - Search correctness, URL state and caching (Task 1): 1 h
 - Grid virtualization and infinite scroll (Task 2): 1.5 h
