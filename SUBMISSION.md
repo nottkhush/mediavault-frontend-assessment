@@ -16,7 +16,7 @@
 
 ## Time spent
 
-- Total: about 13 hours over 7 days.
+- Total: about 13 hours over 5 days.
 - Reading the brief and the baseline, and the defect inventory: 2 h
 - Search correctness, URL state and caching (Task 1): 1 h
 - Grid virtualization and infinite scroll (Task 2): 1.5 h
